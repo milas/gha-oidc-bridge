@@ -1,0 +1,79 @@
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: gha-system
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: gha-oidc-bridge
+  namespace: gha-system
+  labels:
+    app.kubernetes.io/name: gha-oidc-bridge
+    app.kubernetes.io/instance: gha-oidc-bridge
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gha-oidc-bridge
+      app.kubernetes.io/instance: gha-oidc-bridge
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gha-oidc-bridge
+        app.kubernetes.io/instance: gha-oidc-bridge
+    spec:
+      containers:
+        - name: gha-oidc-bridge
+          image: ghcr.io/milas/gha-oidc-bridge
+          ports:
+            - name: http
+              containerPort: 45321
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: gha-oidc-bridge
+  namespace: gha-system
+  labels:
+    app.kubernetes.io/name: gha-oidc-bridge
+    app.kubernetes.io/instance: gha-oidc-bridge
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: gha-oidc-bridge
+    app.kubernetes.io/instance: gha-oidc-bridge
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: gha-oidc-bridge
+  namespace: gha-system
+  labels:
+    app.kubernetes.io/name: gha-oidc-bridge
+    app.kubernetes.io/instance: gha-oidc-bridge
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: gha.dev.readygo.run
+      http:
+        paths:
+          - backend:
+              service:
+                name: gha-oidc-bridge
+                port:
+                  name: http
+            pathType: Prefix
+            path: '/'
+  tls:
+    - secretName: gha-oidc-bridge-tls
+      hosts:
+        - gha.dev.readygo.run
+---

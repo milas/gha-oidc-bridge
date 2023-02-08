@@ -1,0 +1,23 @@
+name: CI/CD
+
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read  # This is required for actions/checkout
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  oidc-ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get GHA OIDC Token
+        uses: actions/github-script@v6
+        id: idtoken
+        with:
+          result-encoding: string
+          script: return await core.getIDToken()
+      - name: Exchange GHA OIDC Token
+        run: curl -sSL -XPOST -d "${{steps.idtoken.outputs.result }}" 'https://gha.dev.readygo.run/oidc/gha'
